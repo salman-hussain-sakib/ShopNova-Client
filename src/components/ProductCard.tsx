@@ -17,12 +17,18 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
   const [added, setAdded] = useState(false);
   const cardRef = useRef<HTMLAnchorElement>(null);
   const [visible, setVisible] = useState(false);
+  const [isTouch, setIsTouch] = useState(false);
 
   const discount = product.compareAtPrice
     ? Math.round((1 - product.price / product.compareAtPrice) * 100)
     : 0;
 
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
+
+  // Detect touch device once
+  useEffect(() => {
+    setIsTouch('ontouchstart' in window || navigator.maxTouchPoints > 0);
+  }, []);
 
   // ── Scroll-triggered 3D entrance ──────────────────────────────────────
   useEffect(() => {
@@ -45,6 +51,7 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
   }, [index]);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (isTouch) return; // Skip 3D tilt on touch devices for smoothness
     const card = e.currentTarget;
     const rect = card.getBoundingClientRect();
     const x = e.clientX - rect.left;

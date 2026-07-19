@@ -13,8 +13,12 @@ export default function Hero() {
     // Trigger entrance animations after mount
     const timer = setTimeout(() => setLoaded(true), 100);
 
+    // Skip pointer parallax on touch devices for smoother performance
+    const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
     const handleScroll = () => setScrollY(window.scrollY);
     const handlePointerMove = (event: PointerEvent) => {
+      if (isTouch) return;
       setPointer({
         x: (event.clientX / window.innerWidth - 0.5) * 2,
         y: (event.clientY / window.innerHeight - 0.5) * 2,
@@ -22,7 +26,9 @@ export default function Hero() {
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('pointermove', handlePointerMove);
+    if (!isTouch) {
+      window.addEventListener('pointermove', handlePointerMove);
+    }
 
     return () => {
       clearTimeout(timer);
@@ -32,8 +38,11 @@ export default function Hero() {
   }, []);
 
   const parallax = Math.min(scrollY / 500, 1);
-  const tiltX = -pointer.y * 8;
-  const tiltY = pointer.x * 10;
+  // Reduce tilt intensity on mobile for smoother experience
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const tiltMultiplier = isMobile ? 0.3 : 1;
+  const tiltX = -pointer.y * 8 * tiltMultiplier;
+  const tiltY = pointer.x * 10 * tiltMultiplier;
 
   return (
     <section className="relative min-h-[70vh] overflow-hidden py-20 sm:py-24 lg:py-28">

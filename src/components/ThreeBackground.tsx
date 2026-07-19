@@ -95,6 +95,27 @@ const backgroundModels = [
   },
 ];
 
+// ─── Device tier detection ──────────────────────────────────────────────────
+type Tier = 'low' | 'mid' | 'high';
+
+function detectTier(): Tier {
+  if (typeof navigator === 'undefined') return 'mid';
+  const cores = navigator.hardwareConcurrency || 2;
+  const mem = (navigator as any).deviceMemory || 2;
+  const isMobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent);
+  if ((cores <= 2 && mem <= 2) || (isMobile && cores <= 2)) return 'low';
+  if (cores >= 4 && mem >= 4 && !isMobile) return 'high';
+  return 'mid';
+}
+
+function tierConfig(tier: Tier) {
+  switch (tier) {
+    case 'low':  return { starCount: 60, modelsToLoad: 2, fps: 24, pixelRatio: 1 };
+    case 'mid':  return { starCount: 150, modelsToLoad: 4, fps: 40, pixelRatio: Math.min(window.devicePixelRatio, 1.5) };
+    default:     return { starCount: 250, modelsToLoad: 5, fps: 60, pixelRatio: 1 };
+  }
+}
+
 export default function ThreeBackground() {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -111,6 +132,16 @@ export default function ThreeBackground() {
     setHasWebGL(supported);
     if (!supported) return;
 
+    // 2. Detect device tier and skip heavy 3D on low-end
+    const tier = detectTier();
+    const cfg = tierConfig(tier);
+
+    // Low-end devices: skip Three.js entirely, show CSS gradient fallback
+    if (tier === 'low') {
+      setHasWebGL(false);
+      return;
+    }
+
     let active = true;
     let renderer: any = null;
     let scene: any = null;
@@ -118,6 +149,8 @@ export default function ThreeBackground() {
     let modelsArray: { mesh: any; config: typeof backgroundModels[0]; currentZ: number }[] = [];
     let starField: any = null;
     let animFrameId: number;
+    let lastTime = 0;
+    const interval = 1000 / cfg.fps;
 
     loadThreeAndLoader()
       .then(() => {
@@ -131,7 +164,7 @@ export default function ThreeBackground() {
 
         // Initialize Scene
         scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(0x0a0a16, 0.035); // fog creates smooth fade-out at depth
+        scene.fog = new THREE.FogExp2(0x0a0a16, 0.035);
 
         // Initialize Camera
         const w = window.innerWidth;
@@ -143,11 +176,11 @@ export default function ThreeBackground() {
         renderer = new THREE.WebGLRenderer({
           canvas: canvasRef.current,
           alpha: true,
-          antialias: false, // Turn off antialiasing for raw performance since it's a background
+          antialias: false,
           powerPreference: 'high-performance',
         });
         renderer.setSize(w, h);
-        renderer.setPixelRatio(1); // Force pixel ratio 1 for perfectly smooth 60 FPS on all devices
+        renderer.setPixelRatio(cfg.pixelRatio);
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
         renderer.toneMappingExposure = 0.8;
 
@@ -159,17 +192,17 @@ export default function ThreeBackground() {
         dirLight1.position.set(5, 10, 7);
         scene.add(dirLight1);
 
-        const dirLight2 = new THREE.DirectionalLight(0x6d5dfc, 1.2); // neon fill light
+        const dirLight2 = new THREE.DirectionalLight(0x6d5dfc, 1.2);
         dirLight2.position.set(-6, -2, -5);
         scene.add(dirLight2);
 
-        const pointLight = new THREE.PointLight(0x2dd4bf, 1.5, 15); // turquoise point glow
+        const pointLight = new THREE.PointLight(0x2dd4bf, 1.5, 15);
         pointLight.position.set(0, 2, -2);
         scene.add(pointLight);
 
         // Add starfield particle system
         const starsGeometry = new THREE.BufferGeometry();
-        const starsCount = 250;
+        const starsCount = cfg.starCount;
         const starPositions = new Float32Array(starsCount * 3);
         const starColors = new Float32Array(starsCount * 3);
 
@@ -182,7 +215,7 @@ export default function ThreeBackground() {
         for (let i = 0; i < starsCount * 3; i += 3) {
           starPositions[i] = (Math.random() - 0.5) * 35;
           starPositions[i + 1] = (Math.random() - 0.5) * 35;
-          starPositions[i + 2] = Math.random() * -40; // extend far into background
+          starPositions[i + 2] = Math.random() * -40;
 
           const color = spaceColors[Math.floor(Math.random() * spaceColors.length)];
           starColors[i] = color.r;
@@ -206,32 +239,25 @@ export default function ThreeBackground() {
         // Loader
         const loader = new THREE.GLTFLoader();
 
-        // Load configured models
-        backgroundModels.forEach((cfg) => {
+        // Load only a subset of models on mid-tier
+        const modelsToLoad = backgroundModels.slice(0, cfg.modelsToLoad);
+        modelsToLoad.forEach((cfg) => {
           loader.load(
             cfg.url,
             (gltf: any) => {
               if (!active) return;
               const mesh = gltf.scene;
 
-              // Center geometry to avoid weird offsets
               const box = new THREE.Box3().setFromObject(mesh);
               const center = box.getCenter(new THREE.Vector3());
               mesh.position.x = -center.x;
               mesh.position.y = -center.y;
               mesh.position.z = -center.z;
 
-              // Wrap in parent group for clean local/global transformations
               const parentGroup = new THREE.Group();
               parentGroup.add(mesh);
-              
-              // Scale according to config
               parentGroup.scale.set(cfg.scale, cfg.scale, cfg.scale);
-              
-              // Apply starting base positions
               parentGroup.position.set(cfg.basePos.x, cfg.basePos.y, cfg.basePos.z);
-              
-              // Randomize initial rotation for realism
               parentGroup.rotation.set(
                 Math.random() * Math.PI,
                 Math.random() * Math.PI,
@@ -248,12 +274,11 @@ export default function ThreeBackground() {
             undefined,
             (error: any) => {
               console.warn(`Could not load background model ${cfg.category}, using geometric mesh.`, error);
-              // Fallback primitive
               let geom;
               if (cfg.category === 'kitchen') geom = new THREE.CylinderGeometry(0.5, 0.5, 2, 16);
               else if (cfg.category === 'footwear') geom = new THREE.ConeGeometry(0.8, 1.5, 4);
               else geom = new THREE.TorusGeometry(0.6, 0.2, 8, 16);
-              
+
               const mat = new THREE.MeshPhysicalMaterial({
                 color: 0x6d5dfc,
                 metalness: 0.1,
@@ -301,49 +326,42 @@ export default function ThreeBackground() {
         window.addEventListener('resize', handleResize);
 
         // Animation Loop
-        const animate = () => {
+        const animate = (time: number) => {
           if (!active) return;
           animFrameId = requestAnimationFrame(animate);
+          if (time - lastTime < interval) return;
+          lastTime = time;
 
-          // Interpolate scroll and mouse coords smoothly AND FAST
-          scrollYRef.current.current += (scrollYRef.current.target - scrollYRef.current.current) * 0.15;
-          mouseRef.current.currentX += (mouseRef.current.x - mouseRef.current.currentX) * 0.15;
-          mouseRef.current.currentY += (mouseRef.current.y - mouseRef.current.currentY) * 0.15;
+          const lerp = 0.15;
+          scrollYRef.current.current += (scrollYRef.current.target - scrollYRef.current.current) * lerp;
+          mouseRef.current.currentX += (mouseRef.current.x - mouseRef.current.currentX) * lerp;
+          mouseRef.current.currentY += (mouseRef.current.y - mouseRef.current.currentY) * lerp;
 
-          const scrollZOffset = scrollYRef.current.current * 0.012; // slightly faster scroll parallax
+          const scrollZOffset = scrollYRef.current.current * 0.012;
 
-          // Parallax camera shifting based on mouse coords
           if (camera) {
             camera.position.x = mouseRef.current.currentX * 1.5;
             camera.position.y = -mouseRef.current.currentY * 1.5;
             camera.lookAt(new THREE.Vector3(0, 0, -10));
           }
 
-          // Gentle ambient drift for stars
           if (starField) {
             starField.rotation.z += 0.0003;
             starField.position.z = scrollZOffset * 0.4;
           }
 
-          // Animate and wrap models
           modelsArray.forEach((item) => {
             const { mesh, config } = item;
 
-            // Rotation
             mesh.rotation.x += config.rotSpeed.x;
             mesh.rotation.y += config.rotSpeed.y;
             mesh.rotation.z += config.rotSpeed.z;
 
-            // Update Z depth mapping scroll offset
             let localZ = config.basePos.z + scrollZOffset;
-            
-            // Loop models indefinitely as we scroll deeper into pages
             while (localZ > 5) localZ -= 30;
             while (localZ < -25) localZ += 30;
-            
             mesh.position.z = localZ;
 
-            // Subtle drift oscillation
             const time = Date.now() * 0.001;
             mesh.position.x = config.basePos.x + Math.sin(time + config.basePos.z) * 0.15;
             mesh.position.y = config.basePos.y + Math.cos(time * 0.8 + config.basePos.x) * 0.15;
@@ -351,7 +369,7 @@ export default function ThreeBackground() {
 
           renderer.render(scene, camera);
         };
-        animate();
+        animFrameId = requestAnimationFrame(animate);
 
         return () => {
           window.removeEventListener('scroll', handleScroll);

@@ -81,6 +81,16 @@ const foregroundModels = [
   },
 ];
 
+function detectTier(): 'low' | 'mid' | 'high' {
+  if (typeof navigator === 'undefined') return 'mid';
+  const cores = navigator.hardwareConcurrency || 2;
+  const mem = (navigator as any).deviceMemory || 2;
+  const isMobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent);
+  if ((cores <= 2 && mem <= 2) || (isMobile && cores <= 2)) return 'low';
+  if (cores >= 4 && mem >= 4 && !isMobile) return 'high';
+  return 'mid';
+}
+
 export default function ThreeForeground() {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -96,12 +106,21 @@ export default function ThreeForeground() {
     setHasWebGL(supported);
     if (!supported) return;
 
+    // Skip heavy foreground 3D on low-end devices
+    const tier = detectTier();
+    if (tier === 'low') {
+      setHasWebGL(false);
+      return;
+    }
+
     let active = true;
     let renderer: any = null;
     let scene: any = null;
     let camera: any = null;
     let modelsArray: { mesh: any; config: typeof foregroundModels[0]; currentZ: number }[] = [];
     let animFrameId: number;
+    let lastTime = 0;
+    const interval = tier === 'mid' ? 1000 / 30 : 1000 / 45;
 
     loadThreeAndLoader()
       .then(() => {
@@ -238,42 +257,38 @@ export default function ThreeForeground() {
         window.addEventListener('resize', handleResize);
 
         // Animation Loop
-        const animate = () => {
+        const animate = (time: number) => {
           if (!active) return;
           animFrameId = requestAnimationFrame(animate);
+          if (time - lastTime < interval) return;
+          lastTime = time;
 
-          // Interpolation for lag/ease
-          scrollYRef.current.current += (scrollYRef.current.target - scrollYRef.current.current) * 0.15;
-          mouseRef.current.currentX += (mouseRef.current.x - mouseRef.current.currentX) * 0.15;
-          mouseRef.current.currentY += (mouseRef.current.y - mouseRef.current.currentY) * 0.15;
+          const lerp = tier === 'mid' ? 0.1 : 0.15;
+          scrollYRef.current.current += (scrollYRef.current.target - scrollYRef.current.current) * lerp;
+          mouseRef.current.currentX += (mouseRef.current.x - mouseRef.current.currentX) * lerp;
+          mouseRef.current.currentY += (mouseRef.current.y - mouseRef.current.currentY) * lerp;
 
-          // Foreground scroll multiplier is extremely fast
           const scrollZOffset = scrollYRef.current.current * 0.035;
 
           modelsArray.forEach((item) => {
             const { mesh, config } = item;
 
-            // Rotate faster
             mesh.rotation.x += config.rotSpeed.x * 2;
             mesh.rotation.y += config.rotSpeed.y * 2;
             mesh.rotation.z += config.rotSpeed.z * 2;
 
-            // Translate Z
             let localZ = config.basePos.z + scrollZOffset;
-            
-            // Loop foreground meshes as we scroll
             while (localZ > 5) localZ -= 15;
             while (localZ < -10) localZ += 15;
             mesh.position.z = localZ;
 
-            // Foreground mouse parallax is inverted and stronger for dynamic layered depth
             mesh.position.x = config.basePos.x - mouseRef.current.currentX * 1.5;
             mesh.position.y = config.basePos.y + mouseRef.current.currentY * 1.5;
           });
 
           renderer.render(scene, camera);
         };
-        animate();
+        animFrameId = requestAnimationFrame(animate);
 
         return () => {
           window.removeEventListener('scroll', handleScroll);
