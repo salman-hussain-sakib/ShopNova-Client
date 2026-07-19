@@ -36,7 +36,7 @@ export default function Hero() {
   const tiltY = pointer.x * 10;
 
   return (
-    <section className="relative min-h-[90vh] overflow-hidden py-20 sm:py-24 lg:py-28">
+    <section className="relative min-h-[70vh] overflow-hidden py-20 sm:py-24 lg:py-28">
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
           {/* ── Left: Text content with staggered 3D entrance ─────────── */}

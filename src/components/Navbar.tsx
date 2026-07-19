@@ -92,6 +92,16 @@ export default function Navbar() {
                 <Link href="/contact" className="jelly-link">
                   Contact
                 </Link>
+                {user && user.role !== 'admin' && (
+                  <>
+                    <Link href="/profile" className="jelly-link">
+                      My Profile
+                    </Link>
+                    <Link href="/checkout" className="jelly-link">
+                      Checkout
+                    </Link>
+                  </>
+                )}
                 {user?.role === 'admin' && (
                   <>
                     <Link href="/items/add" className="jelly-link text-secondary">
@@ -101,6 +111,9 @@ export default function Navbar() {
                     </Link>
                     <Link href="/items/manage" className="jelly-link text-secondary">
                       Manage Products
+                    </Link>
+                    <Link href="/admin" className="jelly-link text-secondary">
+                      Dashboard
                     </Link>
                   </>
                 )}
