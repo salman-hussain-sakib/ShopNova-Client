@@ -106,12 +106,8 @@ export default function ThreeForeground() {
     setHasWebGL(supported);
     if (!supported) return;
 
-    // Skip heavy foreground 3D on low-end devices
+    // Detect device tier
     const tier = detectTier();
-    if (tier === 'low') {
-      setHasWebGL(false);
-      return;
-    }
 
     let active = true;
     let renderer: any = null;
@@ -120,7 +116,7 @@ export default function ThreeForeground() {
     let modelsArray: { mesh: any; config: typeof foregroundModels[0]; currentZ: number }[] = [];
     let animFrameId: number;
     let lastTime = 0;
-    const interval = tier === 'mid' ? 1000 / 30 : 1000 / 45;
+    const interval = tier === 'low' ? 1000 / 20 : tier === 'mid' ? 1000 / 30 : 1000 / 45;
 
     loadThreeAndLoader()
       .then(() => {
@@ -145,11 +141,11 @@ export default function ThreeForeground() {
         renderer = new THREE.WebGLRenderer({
           canvas: canvasRef.current,
           alpha: true,
-          antialias: false,
-          powerPreference: 'high-performance',
+          antialias: tier !== 'low',
+          powerPreference: tier === 'low' ? 'low-power' : 'high-performance',
         });
         renderer.setSize(w, h);
-        renderer.setPixelRatio(1);
+        renderer.setPixelRatio(tier === 'low' ? 1 : Math.min(window.devicePixelRatio, 2));
 
         // Lights
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
@@ -263,7 +259,7 @@ export default function ThreeForeground() {
           if (time - lastTime < interval) return;
           lastTime = time;
 
-          const lerp = tier === 'mid' ? 0.1 : 0.15;
+          const lerp = tier === 'low' ? 0.08 : tier === 'mid' ? 0.1 : 0.15;
           scrollYRef.current.current += (scrollYRef.current.target - scrollYRef.current.current) * lerp;
           mouseRef.current.currentX += (mouseRef.current.x - mouseRef.current.currentX) * lerp;
           mouseRef.current.currentY += (mouseRef.current.y - mouseRef.current.currentY) * lerp;

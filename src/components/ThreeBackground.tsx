@@ -110,7 +110,7 @@ function detectTier(): Tier {
 
 function tierConfig(tier: Tier) {
   switch (tier) {
-    case 'low':  return { starCount: 60, modelsToLoad: 2, fps: 24, pixelRatio: 1 };
+    case 'low':  return { starCount: 80, modelsToLoad: 3, fps: 24, pixelRatio: 1 };
     case 'mid':  return { starCount: 150, modelsToLoad: 4, fps: 40, pixelRatio: Math.min(window.devicePixelRatio, 1.5) };
     default:     return { starCount: 250, modelsToLoad: 5, fps: 60, pixelRatio: 1 };
   }
@@ -132,15 +132,9 @@ export default function ThreeBackground() {
     setHasWebGL(supported);
     if (!supported) return;
 
-    // 2. Detect device tier and skip heavy 3D on low-end
+    // 2. Detect device tier
     const tier = detectTier();
     const cfg = tierConfig(tier);
-
-    // Low-end devices: skip Three.js entirely, show CSS gradient fallback
-    if (tier === 'low') {
-      setHasWebGL(false);
-      return;
-    }
 
     let active = true;
     let renderer: any = null;
@@ -176,13 +170,15 @@ export default function ThreeBackground() {
         renderer = new THREE.WebGLRenderer({
           canvas: canvasRef.current,
           alpha: true,
-          antialias: false,
-          powerPreference: 'high-performance',
+          antialias: tier === 'high',
+          powerPreference: tier === 'low' ? 'low-power' : 'high-performance',
         });
         renderer.setSize(w, h);
         renderer.setPixelRatio(cfg.pixelRatio);
-        renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 0.8;
+        if (tier !== 'low') {
+          renderer.toneMapping = THREE.ACESFilmicToneMapping;
+          renderer.toneMappingExposure = 0.8;
+        }
 
         // Lights
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
