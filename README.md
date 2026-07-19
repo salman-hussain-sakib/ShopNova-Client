@@ -48,6 +48,15 @@ client/
 - Admin dashboard with analytics
 - Stripe payment integration
 
+## Admin Panel
+
+| Field    | Value               |
+|----------|---------------------|
+| Email    | `admin@shopnova.com`|
+| Password | `admin123456`       |
+
+> Access the admin dashboard at `/admin` after logging in with the above credentials.
+
 ## Getting Started
 
 ### 1. Install dependencies
