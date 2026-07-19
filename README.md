@@ -1,36 +1,120 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ShopNova - Client
+
+> AI-Powered E-Commerce Frontend built with Next.js, React 19, and Tailwind CSS.
+
+## Tech Stack
+
+- **Framework:** Next.js 16 (App Router)
+- **UI:** React 19 + Tailwind CSS 4
+- **State:** React Context + TanStack Query
+- **Auth:** Google OAuth + Facebook Login
+- **Icons:** Lucide React
+- **Charts:** Recharts
+
+## Project Structure
+
+```
+client/
+├── src/
+│   ├── app/            # Next.js pages (App Router)
+│   │   ├── auth/       # Login, Register, Facebook callback
+│   │   ├── products/   # Product listing & detail pages
+│   │   ├── checkout/   # Checkout flow
+│   │   ├── profile/    # User profile
+│   │   ├── admin/      # Admin dashboard
+│   │   ├── about/      # About page
+│   │   ├── contact/    # Contact page
+│   │   └── privacy/    # Privacy policy
+│   ├── components/     # Reusable UI components
+│   │   ├── Navbar.tsx
+│   │   ├── Footer.tsx
+│   │   ├── AIAssistant.tsx      # AI chatbot with image generation
+│   │   ├── FacebookLoginButton.tsx
+│   │   └── ThreeExperience.tsx  # 3D background
+│   ├── lib/            # Utilities (auth, API, image generator)
+│   └── data/           # Fallback product data
+├── public/             # Static assets (favicon, icons)
+├── next.config.ts
+├── tailwind.config.ts
+└── package.json
+```
+
+## Features
+
+- AI Shopping Assistant with real-time image generation
+- Google & Facebook OAuth login
+- Product search with AI-powered recommendations
+- Responsive design with dark theme
+- Admin dashboard with analytics
+- Stripe payment integration
 
 ## Getting Started
 
-First, run the development server:
+### 1. Install dependencies
+
+```bash
+npm install
+```
+
+### 2. Set up environment variables
+
+```bash
+cp .env.example .env.local
+```
+
+Fill in your `.env.local`:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5000/api
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-google-client-id
+NEXT_PUBLIC_FACEBOOK_APP_ID=your-facebook-app-id
+```
+
+### 3. Start the dev server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Frontend runs on `http://localhost:3000`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deployment (Vercel)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 1. Push to GitHub
 
-## Learn More
+```bash
+git add .
+git commit -m "feat: ready for deployment"
+git push origin main
+```
 
-To learn more about Next.js, take a look at the following resources:
+### 2. Deploy on Vercel
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Go to [vercel.com](https://vercel.com)
+2. Import your GitHub repo
+3. Framework: **Next.js** (auto-detected)
+4. Root Directory: `client`
+5. Add Environment Variables:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Variable | Value |
+|----------|-------|
+| `NEXT_PUBLIC_API_URL` | `https://your-server-url.onrender.com/api` |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | `your-google-client-id` |
+| `NEXT_PUBLIC_FACEBOOK_APP_ID` | `your-facebook-app-id` |
 
-## Deploy on Vercel
+6. Click **Deploy**
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 3. Post-Deploy
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Update `CLIENT_URL` on server to your Vercel URL
+- Add Vercel URL to Google OAuth redirect URIs
+- Add Vercel URL to Facebook OAuth redirect URIs
+
+## Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Build for production |
+| `npm start` | Start production server |
+| `npm run lint` | Run ESLint |
