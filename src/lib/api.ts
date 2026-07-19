@@ -1,8 +1,6 @@
 import { fallbackProducts as clientFallbackProducts, fallbackReviews as clientFallbackReviews } from '../data/products';
 
-export const API_URL = typeof window !== 'undefined' 
-  ? `http://${window.location.hostname}:5000/api`
-  : (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000/api');
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000/api';
 
 export interface User {
   id: string;
