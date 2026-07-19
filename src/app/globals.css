@@ -75,6 +75,7 @@ html {
   scroll-behavior: smooth;
   background-color: var(--background);
   color-scheme: light;
+  overflow-x: hidden;
 }
 
 /* ── Low-end device & reduced-motion optimizations ──────────────────────── */
@@ -124,6 +125,7 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   transition: background-color 0.25s ease, color 0.25s ease;
+  overflow-x: hidden;
 }
 
 .card {
